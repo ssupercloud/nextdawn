@@ -16,7 +16,7 @@ export default function Header() {
       {/* Logo Area */}
       <div className="py-6 text-center">
         <h1 className="text-5xl md:text-8xl font-black font-serif tracking-tighter uppercase leading-none hover:opacity-80 transition-opacity cursor-pointer">
-          <a href="/">The Next Dawn | 黎明报 </a>
+          <a href="/">The Next Dawn</a>
         </h1>
         <p className="text-xs md:text-sm font-medium italic mt-2 text-gray-600 font-sans tracking-wide">
           "Your Web3 Newspaper of Tomorrow"
@@ -26,9 +26,11 @@ export default function Header() {
       {/* Navigation Links */}
       <nav className="border-t border-black border-b flex justify-center py-3 font-bold font-sans text-xs md:text-sm gap-6 md:gap-12 overflow-x-auto whitespace-nowrap px-4 bg-white">
         <a href="#global" className="hover:text-red-700 hover:underline transition-colors">环球</a>
+        <a href="#crypto" className="hover:text-green-700 hover:underline transition-colors">数字资产</a>
+        <a href="#web3" className="hover:text-orange-700 hover:underline transition-colors">Web3</a>
         <a href="#economy" className="hover:text-blue-700 hover:underline transition-colors">财经</a>
         <a href="#tech" className="hover:text-purple-700 hover:underline transition-colors">科技</a>
-        <a href="#crypto" className="hover:text-green-700 hover:underline transition-colors">Web3</a>
+        <a href="#sports" className="hover:text-yellow-700 hover:underline transition-colors">体育</a>
       </nav>
     </header>
   );

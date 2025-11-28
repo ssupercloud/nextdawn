@@ -4,6 +4,9 @@ import { generateNewsArticle, NewsContent } from '@/lib/grok3';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 
+// BUMP VERSION to force re-generation of old English-only articles
+const CURRENT_VERSION = "v11_bilingual";
+
 export async function fetchOrGenerateStory(eventId: string, title: string, outcome: string, probability: number): Promise<NewsContent> {
   try {
     const articlesRef = collection(db, 'articles');
@@ -15,22 +18,24 @@ export async function fetchOrGenerateStory(eventId: string, title: string, outco
       const doc = querySnapshot.docs[0];
       const data = doc.data();
 
-      // Check if it's the NEW format (has headline/imageUrl)
-      if (data.headline && data.imageUrl) {
-         console.log(`✅ Cache Hit for "${data.headline}"`);
+      // Check version matches
+      if (data.version !== CURRENT_VERSION) {
+         console.log(`♻️ Outdated cache. Upgrading to ${CURRENT_VERSION}...`);
+         await deleteDoc(doc.ref);
+      } else {
          return {
              headline: data.headline,
-             story: data.content || data.story,
-             imageUrl: data.imageUrl
+             story: data.content,
+             headline_cn: data.headline_cn || "",
+             story_cn: data.story_cn || "",
+             imageUrl: data.imageUrl,
+             impact: data.impact
          };
       }
-
-      console.log(`🗑️ Found old/broken cache. Upgrading to V4 format...`);
-      await deleteDoc(doc.ref);
     }
 
     // 2. GENERATE NEW
-    console.log(`🚀 Generating V4 Multimedia Story for: ${title}`);
+    console.log(`🚀 Generating ${CURRENT_VERSION} Story for: ${title}`);
     const generated = await generateNewsArticle(
       title, 
       outcome, 
@@ -42,21 +47,28 @@ export async function fetchOrGenerateStory(eventId: string, title: string, outco
     if (generated.story.length > 50) {
         await addDoc(articlesRef, {
             eventId: eventId,
-            title: title, // Keep original title for searching
-            headline: generated.headline, // Save new fancy headline
+            title: title,
+            headline: generated.headline,
             content: generated.story,
+            headline_cn: generated.headline_cn, // Save Chinese
+            story_cn: generated.story_cn,       // Save Chinese
             imageUrl: generated.imageUrl,
+            impact: generated.impact,
+            version: CURRENT_VERSION,
             createdAt: new Date().toISOString()
         });
     }
 
     return generated;
   } catch (error) {
-    console.error("Error in server action:", error);
+    console.error("Error:", error);
     return {
-        headline: "Transmission Error",
-        story: "Unable to retrieve timeline data.",
-        imageUrl: ""
+        headline: "Feed Error",
+        story: "Connection lost.",
+        headline_cn: "系统错误",
+        story_cn: "连接丢失",
+        imageUrl: "",
+        impact: "LOW"
     };
   }
 }

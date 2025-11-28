@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Polymarket Gamma API Endpoint
 const GAMMA_API = 'https://gamma-api.polymarket.com/events';
 
 export interface MarketEvent {
@@ -13,6 +12,7 @@ export interface MarketEvent {
   volume: number;
   markets: {
     question: string;
+    groupItemTitle: string; 
     outcomes: string[];
     outcomePrices: string[]; 
   }[];
@@ -23,12 +23,31 @@ const safeParseArray = (value: any): string[] => {
   if (typeof value === 'string') {
     try {
       return JSON.parse(value);
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   }
   return [];
 };
+
+export async function getBreakingEvents(): Promise<MarketEvent[]> {
+    try {
+        const response = await axios.get(GAMMA_API, {
+            params: {
+                limit: 10,
+                active: true,
+                closed: false,
+                volume_min: 50000, 
+                order: 'volume',   
+                ascending: false
+            }
+        });
+
+        if (!response.data || !Array.isArray(response.data)) return [];
+        return mapResponse(response.data, "Breaking");
+    } catch (error) {
+        console.error("Error fetching breaking events:", error);
+        return [];
+    }
+}
 
 export async function getTopEvents(tag: 'Crypto' | 'Business' | 'Science' | 'Politics'): Promise<MarketEvent[]> {
   try {
@@ -38,33 +57,35 @@ export async function getTopEvents(tag: 'Crypto' | 'Business' | 'Science' | 'Pol
         active: true,
         closed: false,
         tag_slug: tag.toLowerCase(),
-        volume_min: 10000, // Filter out low-activity noise
-        order: 'volume',   // STRICTLY RANK BY VOLUME
-        ascending: false   // HIGHEST FIRST
+        volume_min: 5000, 
+        order: 'volume',
+        ascending: false
       }
     });
 
-    if (!response.data || !Array.isArray(response.data)) {
-      console.warn(`Polymarket API returned unexpected format for tag: ${tag}`);
-      return [];
-    }
-
-    return response.data.map((event: any) => ({
-      id: event.id,
-      title: event.title,
-      slug: event.slug,
-      category: tag,
-      startDate: event.start_date,
-      endDate: event.end_date,
-      volume: Number(event.volume || 0), // Ensure volume is captured
-      markets: Array.isArray(event.markets) ? event.markets.map((m: any) => ({
-        question: m.question,
-        outcomes: safeParseArray(m.outcomes),
-        outcomePrices: safeParseArray(m.outcomePrices)
-      })) : []
-    }));
+    if (!response.data || !Array.isArray(response.data)) return [];
+    return mapResponse(response.data, tag);
   } catch (error) {
     console.error(`Error fetching ${tag} events:`, error);
     return [];
   }
+}
+
+function mapResponse(data: any[], category: string): MarketEvent[] {
+    return data.map((event: any) => ({
+      id: event.id,
+      title: event.title,
+      slug: event.slug,
+      category: category,
+      startDate: event.start_date,
+      endDate: event.end_date,
+      volume: Number(event.volume || 0),
+      markets: Array.isArray(event.markets) ? event.markets.map((m: any) => ({
+        question: m.question,
+        // Crucial Fix: Fallback to question if title is missing
+        groupItemTitle: m.groupItemTitle || m.question || "Outcome", 
+        outcomes: safeParseArray(m.outcomes),
+        outcomePrices: safeParseArray(m.outcomePrices)
+      })) : []
+    }));
 }

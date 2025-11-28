@@ -47,6 +47,7 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
   };
 
   useEffect(() => {
+    // 1. Guard Clause: If no event, stop immediately.
     if (!activeEvent) return;
 
     let isMounted = true;
@@ -54,16 +55,18 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
     async function loadStory() {
         setLoading(true);
         setError(null);
-        // Reset to raw title while loading new fancy headline
+        
+        // Use activeEvent! because we passed the guard clause above
         setNewsContent(prev => ({ ...prev, headline: activeEvent!.title, story: "", imageUrl: "" }));
 
         try {
-            const probability = getProbability(activeEvent);
-            const outcome = getWinningOutcome(activeEvent);
+            // FIX: Added '!' to assert non-null to TypeScript
+            const probability = getProbability(activeEvent!);
+            const outcome = getWinningOutcome(activeEvent!);
 
             const data = await fetchOrGenerateStory(
-                activeEvent.id, 
-                activeEvent.title, 
+                activeEvent!.id, 
+                activeEvent!.title, 
                 outcome, 
                 probability
             );
@@ -90,6 +93,9 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
   if (!activeEvent) return <div className="p-10 text-center font-serif text-gray-500">Waiting for news wire...</div>;
 
   const activeProbability = getProbability(activeEvent);
+
+  // STRICT SORT: Ensure sidebar is strictly ranked by volume (Highest First)
+  const sortedByVolume = [...events].sort((a, b) => b.volume - a.volume);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-8 container mx-auto px-4 mb-12">
@@ -145,14 +151,14 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
          </div>
       </div>
 
-      {/* --- RIGHT COLUMN: Sidebar --- */}
+      {/* --- RIGHT COLUMN: Sidebar (Strictly Sorted by Volume) --- */}
       <div className="md:col-span-4 flex flex-col gap-6 pl-0 md:pl-4">
         <h3 className="font-sans font-black text-sm border-t-4 border-black pt-2 uppercase tracking-widest">
             Highest Volume Wires
         </h3>
         
         <div className="flex flex-col gap-4">
-            {events.map((e) => {
+            {sortedByVolume.map((e) => {
                const prob = getProbability(e);
                const isActive = e.id === activeEvent.id;
 

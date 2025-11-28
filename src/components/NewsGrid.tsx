@@ -27,7 +27,7 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
 
   const getMarketContext = (event: MarketEvent) => {
     try {
-        if (!event.markets || event.markets.length === 0) return { prob: 0, summary: "No data" };
+        if (!event.markets || event.markets.length === 0) return { prob: 0, summary: "No data", topOutcome: "Unknown" };
 
         let outcomesList: { name: string, prob: number }[] = [];
 
@@ -35,17 +35,19 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
             const prices = market.outcomePrices.map(p => Number(p));
             const yesPrice = prices[0] || 0;
             const name = market.groupItemTitle || market.question;
-            outcomesList.push({ name, prob: yesPrice });
+            const cleanName = name.length > 20 ? name.substring(0, 18) + ".." : name;
+            outcomesList.push({ name: cleanName, prob: yesPrice });
         });
 
         outcomesList.sort((a, b) => b.prob - a.prob);
         const top3 = outcomesList.slice(0, 3);
         const highestProb = top3[0]?.prob || 0;
+        const topOutcome = top3[0]?.name || "Yes";
         const summary = top3.map(o => `${o.name} (${(o.prob * 100).toFixed(1)}%)`).join(", ");
 
-        return { prob: highestProb, summary };
+        return { prob: highestProb, summary, topOutcome };
     } catch (e) {
-        return { prob: 0, summary: "Data Error" };
+        return { prob: 0, summary: "Data Error", topOutcome: "Error" };
     }
   };
 
@@ -69,11 +71,13 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
 
         try {
             const { prob, summary } = getMarketContext(activeEvent!);
+            
             const data = await fetchOrGenerateStory(
                 activeEvent!.id, 
                 activeEvent!.title, 
                 summary, 
-                prob
+                prob,
+                activeEvent!.endDate || "Unknown"
             );
             
             if (isMounted) {
@@ -100,10 +104,9 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
 
   if (!activeEvent) return <div className="p-10 text-center font-mono text-gray-500 uppercase tracking-widest">Initialising Feed...</div>;
 
-  const { prob: activeProbability } = getMarketContext(activeEvent);
+  const { prob: activeProbability, topOutcome: activeTopOutcome } = getMarketContext(activeEvent);
   const sortedByVolume = [...events].sort((a, b) => b.volume - a.volume);
   
-  // Format Dates
   const reportDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const targetDate = activeEvent.endDate 
     ? new Date(activeEvent.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -112,16 +115,15 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 container mx-auto px-4 mb-12 font-sans">
       
+      {/* LEFT COLUMN */}
       <div className="lg:col-span-8 flex flex-col gap-4">
         <div className="border-2 border-black bg-white p-4 md:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             
-             {/* Header / Badges */}
              <div className="flex flex-wrap justify-between items-start gap-3 mb-6 border-b-2 border-black pb-4">
                 <div className="flex items-center gap-2">
                     <span className="bg-[#CC0000] text-white px-3 py-1 text-xs font-bold uppercase tracking-widest font-mono shadow-sm">
                         LIVE FEED
                     </span>
-                    {/* NEW: DATES DISPLAY */}
                     <div className="flex flex-col text-[10px] font-mono leading-tight ml-2 border-l border-gray-300 pl-3 text-gray-500">
                         <span>REPORT: <span className="text-black font-bold">{reportDate.toUpperCase()}</span></span>
                         <span>TARGET: <span className="text-[#CC0000] font-bold">{targetDate.toUpperCase()}</span></span>
@@ -134,24 +136,21 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
                         <span className="text-black">{formatVolume(activeEvent.volume)}</span>
                      </div>
                      <div className="flex flex-col items-end">
-                        <span className="text-gray-400 text-[10px] uppercase tracking-wider">Top Odds</span>
-                        <span className="text-[#CC0000]">{(activeProbability * 100).toFixed(0)}%</span>
+                        <span className="text-gray-400 text-[10px] uppercase tracking-wider">Forecast</span>
+                        <span className="text-[#CC0000]">{activeTopOutcome} ({(activeProbability * 100).toFixed(0)}%)</span>
                      </div>
                 </div>
              </div>
 
-             {/* DYNAMIC HEADLINE */}
              <h2 className="text-3xl md:text-5xl font-black mb-2 leading-tight text-gray-900 tracking-tight uppercase">
                 {newsContent.headline || activeEvent.title}
              </h2>
-             {/* CHINESE HEADLINE */}
              {newsContent.headline_cn && (
                  <h3 className="text-xl md:text-2xl font-bold mb-6 text-gray-500 tracking-tight font-serif">
                     {newsContent.headline_cn}
                  </h3>
              )}
 
-             {/* DYNAMIC IMAGE */}
              <div className="relative w-full aspect-video bg-neutral-100 mb-8 border-2 border-black overflow-hidden group">
                 {loading || !newsContent.imageUrl ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-50 text-gray-400">
@@ -170,20 +169,22 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
                 )}
              </div>
 
-             {/* Article Body - Bilingual */}
-             <div className="prose prose-lg font-serif text-gray-800 max-w-none">
+             {/* UPDATED: Tighter typography for web/mobile reading */}
+             <div className="prose prose-sm md:prose-base font-serif text-gray-800 max-w-none">
                 {loading ? (
                     <div className="animate-pulse space-y-4 p-4">
                         <div className="h-3 bg-gray-200 w-full rounded-sm"></div>
                         <div className="h-3 bg-gray-200 w-11/12 rounded-sm"></div>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-6">
-                        <p className="leading-relaxed whitespace-pre-line border-l-4 border-[#CC0000] pl-6 py-1 text-lg">
+                    <div className="flex flex-col gap-4">
+                        {/* English Story: Smaller text, tighter leading */}
+                        <p className="leading-snug whitespace-pre-line border-l-4 border-[#CC0000] pl-4 md:pl-6 py-1 text-sm md:text-base text-justify">
                             {newsContent.story}
                         </p>
+                        {/* Chinese Story: Smaller text, tighter leading, distinct color */}
                         {newsContent.story_cn && (
-                            <p className="leading-relaxed whitespace-pre-line border-l-4 border-gray-300 pl-6 py-1 text-lg text-gray-600">
+                            <p className="leading-snug whitespace-pre-line border-l-4 border-gray-300 pl-4 md:pl-6 py-1 text-sm md:text-base text-gray-600 text-justify">
                                 {newsContent.story_cn}
                             </p>
                         )}
@@ -193,6 +194,7 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
         </div>
       </div>
 
+      {/* RIGHT COLUMN */}
       <div className="lg:col-span-4 flex flex-col gap-4">
         <div className="bg-black text-white p-3 font-mono text-xs uppercase tracking-widest flex justify-between items-center shadow-[4px_4px_0px_0px_rgba(200,200,200,1)] border-2 border-black">
             <span>Top Activity</span>
@@ -204,7 +206,7 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
         
         <div className="flex flex-col gap-3">
             {sortedByVolume.map((e) => {
-               const { prob } = getMarketContext(e); 
+               const { prob, topOutcome } = getMarketContext(e); 
                const isActive = e.id === activeEvent.id;
 
                return (
@@ -221,8 +223,8 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
                           <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 border ${isActive ? 'bg-black text-white border-black' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
                             {formatVolume(e.volume)}
                           </span>
-                          <span className={`text-[10px] font-bold font-mono ${isActive ? 'text-[#CC0000]' : 'text-gray-400'}`}>
-                             {(prob * 100).toFixed(0)}%
+                          <span className={`text-[10px] font-bold font-mono text-right ${isActive ? 'text-[#CC0000]' : 'text-gray-400'}`}>
+                             {topOutcome} <br/> {(prob * 100).toFixed(0)}%
                           </span>
                       </div>
                       <h4 className={`text-sm font-bold leading-snug line-clamp-2 ${isActive ? 'text-black' : 'text-gray-600 group-hover:text-black'}`}>

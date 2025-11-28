@@ -78,11 +78,11 @@ function mapResponse(data: any[], category: string): MarketEvent[] {
       slug: event.slug,
       category: category,
       startDate: event.start_date,
-      endDate: event.end_date,
+      // FIXED: Polymarket Gamma API uses 'endDate' (camelCase), not 'end_date'
+      endDate: event.endDate || event.end_date, 
       volume: Number(event.volume || 0),
       markets: Array.isArray(event.markets) ? event.markets.map((m: any) => ({
         question: m.question,
-        // Crucial Fix: Fallback to question if title is missing
         groupItemTitle: m.groupItemTitle || m.question || "Outcome", 
         outcomes: safeParseArray(m.outcomes),
         outcomePrices: safeParseArray(m.outcomePrices)

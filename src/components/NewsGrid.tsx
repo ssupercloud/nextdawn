@@ -90,7 +90,7 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
     return () => { isMounted = false; };
   }, [activeEvent]);
 
-  if (!activeEvent) return <div className="p-10 text-center font-serif text-gray-500">Waiting for news wire...</div>;
+  if (!activeEvent) return <div className="p-10 text-center font-mono text-gray-500 uppercase tracking-widest">Initialising Feed...</div>;
 
   const activeProbability = getProbability(activeEvent);
 
@@ -98,66 +98,90 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
   const sortedByVolume = [...events].sort((a, b) => b.volume - a.volume);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-12 gap-8 container mx-auto px-4 mb-12">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 container mx-auto px-4 mb-12 font-sans">
       
       {/* --- LEFT COLUMN: Main Story --- */}
-      <div className="md:col-span-8 border-b md:border-b-0 md:border-r border-black pr-0 md:pr-8 pb-8">
-         
-         {/* Metadata Badge */}
-         <div className="flex justify-between items-center mb-4 border-b-2 border-black pb-1">
-            <span className="bg-red-700 text-white px-2 py-1 text-xs font-bold uppercase tracking-widest font-sans">
-                Breaking News
-            </span>
-            <div className="flex gap-3 text-xs font-bold text-gray-600 font-mono">
-                <span>VOL: {formatVolume(activeEvent.volume)}</span>
-                <span>CERTAINTY: {(activeProbability * 100).toFixed(0)}%</span>
-            </div>
-         </div>
-
-         {/* DYNAMIC HEADLINE (Replaces Raw Title) */}
-         <h2 className="text-4xl md:text-6xl font-serif font-black mb-6 leading-tight text-gray-900">
-            {newsContent.headline || activeEvent.title}
-         </h2>
-
-         {/* DYNAMIC IMAGE (Replaces Placeholder) */}
-         <div className="w-full h-64 md:h-96 bg-neutral-100 mb-8 border border-gray-400 relative overflow-hidden">
-            {loading || !newsContent.imageUrl ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
-                    <span className="font-mono text-xs">Visualizing Timeline...</span>
+      <div className="lg:col-span-8 flex flex-col gap-4">
+        {/* The "Paper" Card Effect for Web3 - Brutalist/Cyber Style */}
+        <div className="border-2 border-black bg-white p-4 md:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            
+             {/* Header / Badges */}
+             <div className="flex flex-wrap justify-between items-start gap-3 mb-6 border-b-2 border-black pb-4">
+                <div className="flex items-center gap-2">
+                    <span className="bg-[#CC0000] text-white px-3 py-1 text-xs font-bold uppercase tracking-widest font-mono shadow-sm">
+                        LIVE FEED
+                    </span>
+                    <span className="hidden md:inline-block w-px h-4 bg-gray-300 mx-2"></span>
+                    <span className="text-[10px] md:text-xs font-bold text-gray-500 font-mono tracking-tight uppercase">
+                        HASH: {activeEvent.id.slice(0, 8)}...
+                    </span>
                 </div>
-            ) : (
-                <img 
-                    src={newsContent.imageUrl} 
-                    alt="Editorial Cartoon"
-                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                />
-            )}
-         </div>
-
-         {/* Article Body */}
-         <div className="prose prose-lg font-serif text-gray-900 max-w-none columns-1 md:columns-2 gap-8">
-            {loading ? (
-                <div className="animate-pulse space-y-4 break-inside-avoid">
-                    <div className="h-4 bg-gray-200 rounded w-full"></div>
-                    <div className="h-4 bg-gray-200 rounded w-11/12"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                
+                <div className="flex gap-4 text-xs font-bold font-mono">
+                     <div className="flex flex-col items-end">
+                        <span className="text-gray-400 text-[10px] uppercase tracking-wider">Volume</span>
+                        <span className="text-black">{formatVolume(activeEvent.volume)}</span>
+                     </div>
+                     <div className="flex flex-col items-end">
+                        <span className="text-gray-400 text-[10px] uppercase tracking-wider">Probability</span>
+                        <span className="text-[#CC0000]">{(activeProbability * 100).toFixed(0)}%</span>
+                     </div>
                 </div>
-            ) : (
-                <p className="first-letter:text-5xl first-letter:font-black first-letter:mr-2 first-letter:float-left leading-relaxed whitespace-pre-line break-inside-avoid-column">
-                    {newsContent.story}
-                </p>
-            )}
-         </div>
+             </div>
+
+             {/* DYNAMIC HEADLINE (Replaces Raw Title) */}
+             <h2 className="text-3xl md:text-5xl font-black mb-6 leading-tight text-gray-900 tracking-tight uppercase">
+                {newsContent.headline || activeEvent.title}
+             </h2>
+
+             {/* DYNAMIC IMAGE (Replaces Placeholder) - Cyber Styling */}
+             <div className="relative w-full aspect-video bg-neutral-100 mb-8 border-2 border-black overflow-hidden group">
+                {loading || !newsContent.imageUrl ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-50 text-gray-400">
+                        <div className="animate-spin rounded-none h-8 w-8 border-4 border-black border-t-transparent mb-3"></div>
+                        <span className="font-mono text-xs uppercase tracking-widest">Decrypting Visuals...</span>
+                    </div>
+                ) : (
+                    <>
+                        <img 
+                            src={newsContent.imageUrl} 
+                            alt="Editorial Illustration"
+                            className="w-full h-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-105"
+                        />
+                        {/* Overlay Scanline effect */}
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] z-10 bg-[length:100%_2px,3px_100%] pointer-events-none mix-blend-overlay"></div>
+                    </>
+                )}
+             </div>
+
+             {/* Article Body */}
+             <div className="prose prose-lg font-serif text-gray-800 max-w-none">
+                {loading ? (
+                    <div className="animate-pulse space-y-4 p-4">
+                        <div className="h-3 bg-gray-200 w-full rounded-sm"></div>
+                        <div className="h-3 bg-gray-200 w-11/12 rounded-sm"></div>
+                        <div className="h-3 bg-gray-200 w-full rounded-sm"></div>
+                    </div>
+                ) : (
+                    <p className="leading-relaxed whitespace-pre-line border-l-4 border-[#CC0000] pl-6 py-2 text-lg">
+                        {newsContent.story}
+                    </p>
+                )}
+             </div>
+        </div>
       </div>
 
       {/* --- RIGHT COLUMN: Sidebar (Strictly Sorted by Volume) --- */}
-      <div className="md:col-span-4 flex flex-col gap-6 pl-0 md:pl-4">
-        <h3 className="font-sans font-black text-sm border-t-4 border-black pt-2 uppercase tracking-widest">
-            Highest Volume Wires
-        </h3>
+      <div className="lg:col-span-4 flex flex-col gap-4">
+        <div className="bg-black text-white p-3 font-mono text-xs uppercase tracking-widest flex justify-between items-center shadow-[4px_4px_0px_0px_rgba(200,200,200,1)] border-2 border-black">
+            <span>Top Activity</span>
+            <span className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-[#CC0000] rounded-full animate-pulse"></span>
+                <span className="text-[#CC0000]">Live</span>
+            </span>
+        </div>
         
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
             {sortedByVolume.map((e) => {
                const prob = getProbability(e);
                const isActive = e.id === activeEvent.id;
@@ -166,22 +190,33 @@ export default function NewsGrid({ events }: { events: MarketEvent[] }) {
                    <button 
                      key={e.id} 
                      onClick={() => setActiveEvent(e)}
-                     className={`text-left group border-b border-gray-300 pb-4 last:border-0 transition-all ${isActive ? 'opacity-100 pl-2 border-l-4 border-l-black' : 'opacity-70 hover:opacity-100'}`}
+                     className={`relative p-4 text-left group border-2 transition-all duration-200 w-full ${
+                        isActive 
+                        ? 'bg-zinc-50 border-black shadow-[4px_4px_0px_0px_#CC0000] translate-x-[-2px] translate-y-[-2px] z-10' 
+                        : 'bg-white border-gray-200 hover:border-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:z-10'
+                     }`}
                    >
-                      <div className="flex justify-between items-center mb-1">
-                          <span className={`text-[10px] font-bold font-mono ${isActive ? 'text-red-700' : 'text-gray-500'}`}>
-                            {formatVolume(e.volume)} VOL
+                      <div className="flex justify-between items-center mb-2">
+                          <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 border ${isActive ? 'bg-black text-white border-black' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                            {formatVolume(e.volume)}
                           </span>
-                          <span className={`text-[10px] font-bold font-mono ${isActive ? 'text-black' : 'text-gray-400'}`}>
-                             {(prob * 100).toFixed(0)}% CHANCE
+                          <span className={`text-[10px] font-bold font-mono ${isActive ? 'text-[#CC0000]' : 'text-gray-400'}`}>
+                             {(prob * 100).toFixed(0)}%
                           </span>
                       </div>
-                      <h4 className="text-lg font-serif font-bold leading-tight group-hover:underline">
+                      <h4 className={`text-sm font-bold leading-snug line-clamp-2 ${isActive ? 'text-black' : 'text-gray-600 group-hover:text-black'}`}>
                         {e.title}
                       </h4>
                    </button>
                );
             })}
+        </div>
+        
+        {/* Web3 Ad Style */}
+        <div className="mt-4 border-2 border-black bg-zinc-100 p-6 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <p className="font-mono text-[10px] font-bold uppercase mb-2 text-gray-400 tracking-widest">Sponsored Protocol</p>
+            <p className="font-serif italic text-lg mb-2 text-gray-800">"Don't Trust, Verify."</p>
+            <p className="font-black text-sm mt-1 uppercase tracking-widest text-[#CC0000]">Polymarket</p>
         </div>
       </div>
     </div>

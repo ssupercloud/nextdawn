@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const XAI_API_KEY = process.env.XAI_API_KEY;
 
-console.log("✅ AI Reporter: Creative Engine V23 (Unique Visuals)");
+console.log("✅ AI Reporter: Creative Engine V24 (Objective Analyst)");
 
 export interface NewsContent {
   headline: string;
@@ -30,43 +30,46 @@ export async function generateNewsArticle(
   
   const rawWinner = marketContext.split(',')[0] || "Unknown";
   const winnerName = rawWinner.split('(')[0].trim();
-
-  let simulatedDate = "The Near Future";
-  if (targetDate && targetDate !== "Unknown") {
-      try {
-          const dateObj = new Date(targetDate);
-          dateObj.setDate(dateObj.getDate() + 2);
-          simulatedDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-      } catch (e) {}
-  }
+  const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   const systemPrompt = `
-    You are a Senior Chief Editor for a global financial news agency. 
-    Current Date: ${simulatedDate}.
-    SUBJECT: "${eventTitle}". 
-    CONFIRMED OUTCOME: ${winnerName}.
+    You are a Senior Market Intelligence Analyst for a premier financial terminal (like Bloomberg or Polymarket Analytics).
+    Current Date: ${currentDate}.
+    Target Event Date: ${targetDate || "Future"}.
     
-    TASK: Write a comprehensive news report (Min 300 words).
+    SUBJECT: "${eventTitle}".
+    CURRENT MARKET DATA: ${marketContext}.
     
-    ${forcedHeadline ? `MANDATORY HEADLINE: You MUST use this exact English headline: "${forcedHeadline}"` : ''}
+    TASK:
+    Write an objective, analytical, and insightful deep-dive into this prediction market.
+    
+    CRITICAL RULE: DO NOT PRETEND THE EVENT HAS ALREADY HAPPENED.
+    - You are analyzing the *probability* and *sentiment* of the market right now.
+    - If odds are close (e.g., 45% vs 55%), describe it as a "Tight Race" or "Divided Market".
+    - If odds are high (e.g., >75%), describe it as a "Strong Consensus" or "Clear Favorite".
+    
+    REQUIRED STRUCTURE (Seamless Flow):
+    1. **The Lead**: Define exactly what this event is and the current state of the market (Who is leading? By how much?).
+    2. **The Field**: Breakdown the main options/competitors shown in the market data. Who are the key players?
+    3. **The Stakes**: Why is this relevant? Why does the market care? (Geopolitics, Economics, Cultural Impact).
+    4. **The Context**: Provide real-world background or recent developments that might be driving these specific odds.
     
     TRANSLATION RULES (CHINESE):
-    - Translate headline and story into SIMPLIFIED CHINESE.
-    - DO NOT translate literally. Use idiomatic, professional financial Chinese (e.g. Caixin/Bloomberg CN style).
-    - Tone: Serious, sophisticated, fluent.
+    - Translate into professional, financial Simplified Chinese (Caixin/WSJ style).
+    - Tone: Objective, Analytical, Serious (理性, 分析, 专业).
     
     OUTPUT JSON:
     {
       "headline": "${forcedHeadline || "English Headline"}",
-      "story": "Long English story (Min 300 words). Use \\n\\n for paragraphs.",
+      "story": "A comprehensive analysis (Min 300 words). Use \\n\\n for paragraph breaks.",
       "headline_cn": "Professional Chinese translation of the headline.",
       "story_cn": "Professional Chinese translation of the story.",
-      "image_prompt": "Editorial illustration style, serious, high contrast.",
+      "image_prompt": "Editorial illustration style, serious, high contrast, data-driven themes.",
       "impact": "HIGH"
     }
   `;
 
-  const userPrompt = `Write the report for: ${winnerName}`;
+  const userPrompt = `Analyze the market for: ${eventTitle}`;
 
   const callGrok = async (modelName: string) => {
     return axios.post('https://api.x.ai/v1/chat/completions', {
@@ -75,7 +78,7 @@ export async function generateNewsArticle(
         { role: 'user', content: userPrompt }
       ],
       model: modelName,
-      temperature: 0.3, 
+      temperature: 0.3, // Low temp for factual consistency
       stream: false,
     }, {
       headers: { 'Authorization': `Bearer ${XAI_API_KEY}`, 'Content-Type': 'application/json' }
@@ -83,25 +86,22 @@ export async function generateNewsArticle(
   };
 
   try {
-    const response = await callGrok('grok-2-latest');
+    const response = await callGrok('grok-4-fast-non-reasoning');
     const rawContent = response.data.choices[0].message.content;
     
     let parsed: any;
     try { 
-        // --- V21 JSON SANITIZER ---
+        // V21 JSON SANITIZER
         let clean = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
         const firstBrace = clean.indexOf('{');
         const lastBrace = clean.lastIndexOf('}');
-        
         if (firstBrace !== -1 && lastBrace !== -1) {
             clean = clean.substring(firstBrace, lastBrace + 1);
         }
-
         clean = clean.replace(/(?<!\\)\n/g, "\\n");
         parsed = JSON.parse(clean); 
     } catch (e) { 
         console.error("JSON Parse Failed. Attempting Salvage...");
-        // Regex Salvage
         const extract = (key: string) => {
             const regex = new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"(?=\\s*,\\s*"|\\s*})`);
             const match = rawContent.match(regex);
@@ -109,19 +109,17 @@ export async function generateNewsArticle(
         };
 
         parsed = {
-            headline: extract("headline") || forcedHeadline || `${winnerName} Wins`,
-            story: extract("story") || "We are currently processing the full report details. Please refresh shortly.",
-            headline_cn: extract("headline_cn") || `${winnerName} 获胜`,
-            story_cn: extract("story_cn") || "报告详情正在处理中，请稍后刷新。",
-            image_prompt: extract("image_prompt") || "breaking news",
+            headline: extract("headline") || forcedHeadline || `Market Analysis: ${eventTitle}`,
+            story: extract("story") || "We are currently aggregating market data for this event. Please refresh shortly.",
+            headline_cn: extract("headline_cn") || `市场分析：${eventTitle}`,
+            story_cn: extract("story_cn") || "数据聚合中，请稍后刷新。",
+            image_prompt: extract("image_prompt") || "financial analysis",
             impact: "HIGH"
         };
     }
 
     const styleSuffix = " editorial illustration, wsj stipple style, detailed, serious, trending on artstation, 4k";
-    const encodedPrompt = encodeURIComponent((parsed.image_prompt || "breaking news") + styleSuffix);
-    
-    // FIX: Add Date.now() to seed to ensure uniqueness every time
+    const encodedPrompt = encodeURIComponent((parsed.image_prompt || "financial news") + styleSuffix);
     const uniqueSeed = Math.floor(Math.random() * 1000000) + Date.now();
     const dynamicImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${uniqueSeed}&width=1024&height=576`;
 
@@ -137,11 +135,11 @@ export async function generateNewsArticle(
   } catch (error: any) {
     console.error("❌ Generation Error:", error.message);
     return {
-        headline: `Report: ${winnerName}`,
-        story: `Official records indicate ${winnerName} has secured the position.`,
-        headline_cn: `报告: ${winnerName}`,
-        story_cn: `官方记录显示 ${winnerName} 已获得该职位。`,
-        imageUrl: `https://image.pollinations.ai/prompt/newspaper%20press?nologo=true`,
+        headline: `Market Update: ${eventTitle}`,
+        story: `Current market data indicates ${winnerName} is leading with a probability of ${(probability * 100).toFixed(1)}%. Analysts are monitoring volume shifts closely.`,
+        headline_cn: `市场更新：${eventTitle}`,
+        story_cn: `当前市场数据显示 ${winnerName} 处于领先地位，胜率为 ${(probability * 100).toFixed(1)}%。分析师正在密切关注成交量变化。`,
+        imageUrl: `https://image.pollinations.ai/prompt/financial%20chart?nologo=true`,
         impact: "MEDIUM"
     };
   }

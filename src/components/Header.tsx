@@ -25,13 +25,10 @@ export default function Header() {
 
   return (
     <header className="border-b-4 border-black mb-8 sticky top-0 bg-[#F4F1EA] z-50 shadow-md transition-all">
-      {/* Top Bar */}
       <div className="container mx-auto px-4 py-2 flex justify-between items-center text-[10px] md:text-xs font-serif border-b border-gray-300">
-        {/* UPDATED: Branding instead of Volume Number */}
         <span className="hidden md:inline text-sm font-black tracking-widest uppercase">
             {t('EvideX Presents')}
         </span>
-        
         <span className="uppercase tracking-widest font-bold">{dateString}</span>
         
         <div className="flex items-center gap-2 font-mono text-[10px] font-bold border border-black bg-white">
@@ -40,9 +37,9 @@ export default function Header() {
         </div>
       </div>
       
-      {/* Logo Area */}
       <div className="py-6 text-center">
-        <h1 className="text-5xl md:text-8xl font-black font-serif tracking-tighter uppercase leading-none hover:opacity-80 transition-opacity cursor-pointer">
+        {/* FIXED: Removed 'uppercase' class to respect casing */}
+        <h1 className="text-5xl md:text-8xl font-black font-serif tracking-tighter leading-none hover:opacity-80 transition-opacity cursor-pointer">
           <Link href="/">The Next Dawn</Link>
         </h1>
         <p className="text-xs md:text-sm font-medium italic mt-2 text-gray-600 font-sans tracking-wide">

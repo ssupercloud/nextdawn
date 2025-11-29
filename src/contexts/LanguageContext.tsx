@@ -20,12 +20,17 @@ const translations: Record<string, Record<Language, string>> = {
   'Technology': { EN: 'Technology', CN: '前沿科技' },
   'Sports': { EN: 'Sports', CN: '体育赛事' },
   'Culture': { EN: 'Culture', CN: '流行文化' },
-  'Politics': { EN: 'Politics', CN: '全球政治' },
+  
+  // Section Headers (Dynamic Helpers)
+  'Top Stories': { EN: 'Top Stories', CN: '头条新闻' },
+  'Other Trending Stories': { EN: 'Other Trending Stories', CN: '其他热门动态' },
+  'Stories': { EN: 'Stories', CN: '精选' }, // e.g. "Web3 Stories" -> "Web3 精选"
+  'Other': { EN: 'Other', CN: '其他' },     // e.g. "Other Web3 Stories" -> "其他 Web3 动态"
   
   // UI Labels
   'Global Top Stories': { EN: 'Global Top Stories', CN: '全球重磅头条' },
   'Market Wire': { EN: 'Market Wire', CN: '市场实时快讯' },
-  'Return to Live Wire': { EN: 'Return to Live Wire', CN: '返回实时新闻流' }, // Fixed spacing
+  'Return to Live Wire': { EN: 'Return to Live Wire', CN: '返回实时新闻流' },
   'EvideX Presents': { EN: 'EvideX Presents', CN: 'EvideX 呈现' },
   'Consensus': { EN: 'Consensus', CN: '市场共识' },
   'Leading': { EN: 'Leading', CN: '领跑' },

@@ -29,16 +29,15 @@ const safeParseArray = (value: any): string[] => {
 };
 
 const CATEGORY_MAP: Record<string, string> = {
-    'web3': 'Crypto',
-    'economy': 'Business',
-    'technology': 'Science',
-    'sports': 'Sports',
-    'culture': 'Pop Culture', 
-    'politics': 'Politics'
+    'web3': 'crypto',
+    'economy': 'business',
+    'technology': 'science',
+    'sports': 'sports',
+    'culture': 'pop-culture', 
+    'politics': 'politics'
 };
 
 export async function getCategoryEvents(category: string): Promise<MarketEvent[]> {
-    // SAFETY: Default to "breaking" if category is missing or empty
     if (!category) return getBreakingEvents();
 
     const apiTag = CATEGORY_MAP[category.toLowerCase()] || category;
@@ -50,7 +49,7 @@ export async function getCategoryEvents(category: string): Promise<MarketEvent[]
     try {
         const response = await axios.get(GAMMA_API, {
             params: {
-                limit: 12,
+                limit: 20, // INCREASED: Fetch enough for 17 stories + buffer
                 active: true,
                 closed: false,
                 tag_slug: apiTag.toLowerCase(),
@@ -72,7 +71,7 @@ export async function getBreakingEvents(): Promise<MarketEvent[]> {
     try {
         const response = await axios.get(GAMMA_API, {
             params: {
-                limit: 12,
+                limit: 12, // Keep Front Page lighter
                 active: true,
                 closed: false,
                 volume_min: 50000, 

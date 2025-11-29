@@ -4,8 +4,8 @@ import { generateNewsArticle, NewsContent } from '@/lib/grok3';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, setDoc, addDoc, deleteDoc, doc } from 'firebase/firestore';
 
-// BUMP VERSION to force re-generation with unique images and new labels
-const CURRENT_VERSION = "v23_visual_fix";
+// BUMP VERSION to force re-generation with Objective Analyst style
+const CURRENT_VERSION = "v24_objective_analyst";
 
 export async function fetchOrGenerateStory(
     eventId: string, 

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const XAI_API_KEY = process.env.XAI_API_KEY;
 
-console.log("✅ AI Reporter: Creative Engine V15 (Serious Journalism)");
+console.log("✅ AI Reporter: Creative Engine V23 (Unique Visuals)");
 
 export interface NewsContent {
   headline: string;
@@ -13,7 +13,13 @@ export interface NewsContent {
   impact: string; 
 }
 
-export async function generateNewsArticle(eventTitle: string, marketContext: string, probability: number, targetDate: string): Promise<NewsContent> {
+export async function generateNewsArticle(
+    eventTitle: string, 
+    marketContext: string, 
+    probability: number, 
+    targetDate: string,
+    forcedHeadline?: string
+): Promise<NewsContent> {
   if (!XAI_API_KEY) {
     return { 
         headline: "System Offline", story: "Config pending.", 
@@ -25,50 +31,42 @@ export async function generateNewsArticle(eventTitle: string, marketContext: str
   const rawWinner = marketContext.split(',')[0] || "Unknown";
   const winnerName = rawWinner.split('(')[0].trim();
 
-  // DYNAMIC DATE: Set context to shortly after the resolution
   let simulatedDate = "The Near Future";
   if (targetDate && targetDate !== "Unknown") {
       try {
           const dateObj = new Date(targetDate);
-          dateObj.setDate(dateObj.getDate() + 2); // 2 days after event
+          dateObj.setDate(dateObj.getDate() + 2);
           simulatedDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
       } catch (e) {}
   }
 
   const systemPrompt = `
-    You are a Senior Chief Editor for a prestigious global news agency (like Reuters, The Economist, or Financial Times).
+    You are a Senior Chief Editor for a global financial news agency. 
     Current Date: ${simulatedDate}.
-    
-    SUBJECT: "${eventTitle}".
+    SUBJECT: "${eventTitle}". 
     CONFIRMED OUTCOME: ${winnerName}.
     
-    TASK:
-    Write a serious, insightful, and comprehensive news report analyzing this outcome.
+    TASK: Write a comprehensive news report (Min 300 words).
     
-    STRICT GUIDELINES:
-    1. **TONE**: Professional, objective, analytical, and grounded. NO sci-fi slang, NO "cyberpunk" references, NO sensationlism.
-    2. **DEPTH**: You must explain the *significance* of this event. Who is the winner? What is their history? Why does this matter to the global market/political landscape?
-    3. **LENGTH**: CRITICAL. The story MUST be at least 350 words. Do not summarize. Elaborate on the background and implications.
-    4. **PERSPECTIVE**: Treat the outcome as a confirmed historical fact that just happened.
+    ${forcedHeadline ? `MANDATORY HEADLINE: You MUST use this exact English headline: "${forcedHeadline}"` : ''}
     
-    STRUCTURE:
-    - **The Lede**: State the victory clearly and its immediate impact.
-    - **The Background**: Contextualize the winner (Who are they? What was the path to victory?).
-    - **The Analysis**: Why did this happen? What were the key drivers?
-    - **The Outlook**: What comes next?
+    TRANSLATION RULES (CHINESE):
+    - Translate headline and story into SIMPLIFIED CHINESE.
+    - DO NOT translate literally. Use idiomatic, professional financial Chinese (e.g. Caixin/Bloomberg CN style).
+    - Tone: Serious, sophisticated, fluent.
     
     OUTPUT JSON:
     {
-      "headline": "Serious, professional headline (Max 10 words)",
-      "story": "A long, detailed article (Min 350 words). Use standard paragraph formatting (\\n\\n).",
-      "headline_cn": "Chinese translation of headline (Formal/Professional Chinese)",
-      "story_cn": "Chinese translation of the full story (Formal/Professional Chinese)",
-      "image_prompt": "An editorial illustration suitable for the Wall Street Journal or The Economist. Style: 'stipple drawing, editorial illustration, serious, detailed, high contrast'.",
-      "impact": "CRITICAL" | "HIGH" | "MEDIUM"
+      "headline": "${forcedHeadline || "English Headline"}",
+      "story": "Long English story (Min 300 words). Use \\n\\n for paragraphs.",
+      "headline_cn": "Professional Chinese translation of the headline.",
+      "story_cn": "Professional Chinese translation of the story.",
+      "image_prompt": "Editorial illustration style, serious, high contrast.",
+      "impact": "HIGH"
     }
   `;
 
-  const userPrompt = `Write the comprehensive report for: ${winnerName}`;
+  const userPrompt = `Write the report for: ${winnerName}`;
 
   const callGrok = async (modelName: string) => {
     return axios.post('https://api.x.ai/v1/chat/completions', {
@@ -77,9 +75,8 @@ export async function generateNewsArticle(eventTitle: string, marketContext: str
         { role: 'user', content: userPrompt }
       ],
       model: modelName,
-      temperature: 0.4, // Lower temperature for more grounded/consistent output
+      temperature: 0.3, 
       stream: false,
-      response_format: { type: "json_object" }
     }, {
       headers: { 'Authorization': `Bearer ${XAI_API_KEY}`, 'Content-Type': 'application/json' }
     });
@@ -90,22 +87,49 @@ export async function generateNewsArticle(eventTitle: string, marketContext: str
     const rawContent = response.data.choices[0].message.content;
     
     let parsed: any;
-    try { parsed = JSON.parse(rawContent); } 
-    catch (e) { 
-        const clean = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+    try { 
+        // --- V21 JSON SANITIZER ---
+        let clean = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+        const firstBrace = clean.indexOf('{');
+        const lastBrace = clean.lastIndexOf('}');
+        
+        if (firstBrace !== -1 && lastBrace !== -1) {
+            clean = clean.substring(firstBrace, lastBrace + 1);
+        }
+
+        clean = clean.replace(/(?<!\\)\n/g, "\\n");
         parsed = JSON.parse(clean); 
+    } catch (e) { 
+        console.error("JSON Parse Failed. Attempting Salvage...");
+        // Regex Salvage
+        const extract = (key: string) => {
+            const regex = new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)"(?=\\s*,\\s*"|\\s*})`);
+            const match = rawContent.match(regex);
+            return match ? match[1].replace(/\\n/g, '\n') : "";
+        };
+
+        parsed = {
+            headline: extract("headline") || forcedHeadline || `${winnerName} Wins`,
+            story: extract("story") || "We are currently processing the full report details. Please refresh shortly.",
+            headline_cn: extract("headline_cn") || `${winnerName} 获胜`,
+            story_cn: extract("story_cn") || "报告详情正在处理中，请稍后刷新。",
+            image_prompt: extract("image_prompt") || "breaking news",
+            impact: "HIGH"
+        };
     }
 
-    // Updated Image Style for "Serious News"
     const styleSuffix = " editorial illustration, wsj stipple style, detailed, serious, trending on artstation, 4k";
-    const encodedPrompt = encodeURIComponent(parsed.image_prompt + styleSuffix);
-    const dynamicImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${Math.random()}&width=1024&height=576`;
+    const encodedPrompt = encodeURIComponent((parsed.image_prompt || "breaking news") + styleSuffix);
+    
+    // FIX: Add Date.now() to seed to ensure uniqueness every time
+    const uniqueSeed = Math.floor(Math.random() * 1000000) + Date.now();
+    const dynamicImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&seed=${uniqueSeed}&width=1024&height=576`;
 
     return {
-        headline: parsed.headline || `${winnerName} Secures Victory`,
-        story: parsed.story || "Data verification in progress...",
-        headline_cn: parsed.headline_cn || `${winnerName} 获胜`,
-        story_cn: parsed.story_cn || "数据核实中...",
+        headline: parsed.headline,
+        story: parsed.story,
+        headline_cn: parsed.headline_cn,
+        story_cn: parsed.story_cn,
         imageUrl: dynamicImageUrl,
         impact: parsed.impact || "HIGH"
     };
@@ -114,9 +138,9 @@ export async function generateNewsArticle(eventTitle: string, marketContext: str
     console.error("❌ Generation Error:", error.message);
     return {
         headline: `Report: ${winnerName}`,
-        story: `Official records indicate ${winnerName} has secured the position. Analysts are currently reviewing the implications.`,
+        story: `Official records indicate ${winnerName} has secured the position.`,
         headline_cn: `报告: ${winnerName}`,
-        story_cn: `官方记录显示 ${winnerName} 已获得该职位。分析师目前正在审查其影响。`,
+        story_cn: `官方记录显示 ${winnerName} 已获得该职位。`,
         imageUrl: `https://image.pollinations.ai/prompt/newspaper%20press?nologo=true`,
         impact: "MEDIUM"
     };

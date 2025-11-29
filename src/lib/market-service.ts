@@ -28,11 +28,51 @@ const safeParseArray = (value: any): string[] => {
   return [];
 };
 
+const CATEGORY_MAP: Record<string, string> = {
+    'web3': 'Crypto',
+    'economy': 'Business',
+    'technology': 'Science',
+    'sports': 'Sports',
+    'culture': 'Pop Culture', 
+    'politics': 'Politics'
+};
+
+export async function getCategoryEvents(category: string): Promise<MarketEvent[]> {
+    // SAFETY: Default to "breaking" if category is missing or empty
+    if (!category) return getBreakingEvents();
+
+    const apiTag = CATEGORY_MAP[category.toLowerCase()] || category;
+    
+    if (category.toLowerCase() === 'trending') {
+        return getBreakingEvents();
+    }
+
+    try {
+        const response = await axios.get(GAMMA_API, {
+            params: {
+                limit: 12,
+                active: true,
+                closed: false,
+                tag_slug: apiTag.toLowerCase(),
+                volume_min: 1000, 
+                order: 'volume',
+                ascending: false
+            }
+        });
+
+        if (!response.data || !Array.isArray(response.data)) return [];
+        return mapResponse(response.data, apiTag);
+    } catch (error) {
+        console.error(`Error fetching ${category} events:`, error);
+        return [];
+    }
+}
+
 export async function getBreakingEvents(): Promise<MarketEvent[]> {
     try {
         const response = await axios.get(GAMMA_API, {
             params: {
-                limit: 10,
+                limit: 12,
                 active: true,
                 closed: false,
                 volume_min: 50000, 
@@ -50,25 +90,7 @@ export async function getBreakingEvents(): Promise<MarketEvent[]> {
 }
 
 export async function getTopEvents(tag: 'Crypto' | 'Business' | 'Science' | 'Politics'): Promise<MarketEvent[]> {
-  try {
-    const response = await axios.get(GAMMA_API, {
-      params: {
-        limit: 10,
-        active: true,
-        closed: false,
-        tag_slug: tag.toLowerCase(),
-        volume_min: 5000, 
-        order: 'volume',
-        ascending: false
-      }
-    });
-
-    if (!response.data || !Array.isArray(response.data)) return [];
-    return mapResponse(response.data, tag);
-  } catch (error) {
-    console.error(`Error fetching ${tag} events:`, error);
-    return [];
-  }
+    return getCategoryEvents(tag);
 }
 
 function mapResponse(data: any[], category: string): MarketEvent[] {
@@ -78,7 +100,6 @@ function mapResponse(data: any[], category: string): MarketEvent[] {
       slug: event.slug,
       category: category,
       startDate: event.start_date,
-      // FIXED: Polymarket Gamma API uses 'endDate' (camelCase), not 'end_date'
       endDate: event.endDate || event.end_date, 
       volume: Number(event.volume || 0),
       markets: Array.isArray(event.markets) ? event.markets.map((m: any) => ({

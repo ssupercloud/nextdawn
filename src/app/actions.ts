@@ -2,32 +2,31 @@
 
 import { generateNewsArticle, NewsContent } from '@/lib/grok3'; 
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, setDoc, addDoc, deleteDoc, doc } from 'firebase/firestore';
 
-// BUMP VERSION to force re-generation with Serious Tone & Longer Length
-const CURRENT_VERSION = "v15_serious_journalism";
+// BUMP VERSION to force re-generation with unique images and new labels
+const CURRENT_VERSION = "v23_visual_fix";
 
 export async function fetchOrGenerateStory(
     eventId: string, 
     title: string, 
     outcome: string, 
     probability: number,
-    targetDate: string 
+    targetDate: string,
+    forcedHeadline?: string 
 ): Promise<NewsContent> {
   try {
     const articlesRef = collection(db, 'articles');
     const q = query(articlesRef, where('eventId', '==', eventId));
     const querySnapshot = await getDocs(q);
 
-    if (!querySnapshot.empty) {
-      const doc = querySnapshot.docs[0];
-      const data = doc.data();
+    let existingDocId = null;
 
-      // STRICT VERSION CHECK
-      if (data.version !== CURRENT_VERSION) {
-         console.log(`♻️ Outdated style/length. Upgrading to ${CURRENT_VERSION}...`);
-         await deleteDoc(doc.ref);
-      } else {
+    if (!querySnapshot.empty) {
+      const document = querySnapshot.docs[0];
+      const data = document.data();
+
+      if (data.version === CURRENT_VERSION) {
          return {
              headline: data.headline,
              story: data.content,
@@ -37,6 +36,7 @@ export async function fetchOrGenerateStory(
              impact: data.impact
          };
       }
+      existingDocId = document.id;
     }
 
     console.log(`🚀 Generating ${CURRENT_VERSION} Report for: ${title}`);
@@ -45,23 +45,29 @@ export async function fetchOrGenerateStory(
       title, 
       outcome, 
       probability, 
-      targetDate
+      targetDate,
+      forcedHeadline 
     );
 
-    // Save only if length is sufficient (Basic check)
-    if (generated.story.length > 100) {
-        await addDoc(articlesRef, {
-            eventId: eventId,
-            title: title,
-            headline: generated.headline,
-            content: generated.story,
-            headline_cn: generated.headline_cn,
-            story_cn: generated.story_cn,
-            imageUrl: generated.imageUrl,
-            impact: generated.impact,
-            version: CURRENT_VERSION,
-            createdAt: new Date().toISOString()
-        });
+    const articleData = {
+        eventId: eventId,
+        title: title,
+        headline: generated.headline,
+        content: generated.story,
+        headline_cn: generated.headline_cn,
+        story_cn: generated.story_cn,
+        imageUrl: generated.imageUrl,
+        impact: generated.impact,
+        version: CURRENT_VERSION,
+        createdAt: new Date().toISOString()
+    };
+
+    if (generated.story.length > 50) {
+        if (existingDocId) {
+            await setDoc(doc(db, 'articles', existingDocId), articleData);
+        } else {
+            await addDoc(articlesRef, articleData);
+        }
     }
 
     return generated;

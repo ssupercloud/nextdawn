@@ -368,7 +368,8 @@ export default function NewsGrid({ events, category = "Trending" }: NewsGridProp
                     ) : (
                         <>
                             <img src={newsContent.imageUrl} className="w-full h-full object-cover transition-transform duration-1000 hover:scale-105" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                            {/* UPDATED: Stronger gradient for better text contrast */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent"></div>
                         </>
                     )}
                     <div className="absolute bottom-0 left-0 w-full p-6 md:p-12 text-white">
@@ -376,10 +377,12 @@ export default function NewsGrid({ events, category = "Trending" }: NewsGridProp
                             <span className="bg-indigo-600 text-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg">
                                 {t('DEEP DIVE')}
                             </span>
-                            <span className="text-white/80 text-xs font-medium tracking-wide border-l border-white/30 pl-3">
+                            {/* UPDATED: Added drop-shadow for better readability */}
+                            <span className="text-white text-xs font-medium tracking-wide border-l border-white/30 pl-3 drop-shadow-sm">
                                 {t('REPORT')}: {reportDate}
                             </span>
                         </div>
+                        {/* UPDATED: Added drop-shadow for better readability */}
                         <h1 className="text-3xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tight drop-shadow-lg max-w-4xl">
                             {displayHeadline}
                         </h1>
@@ -405,7 +408,6 @@ export default function NewsGrid({ events, category = "Trending" }: NewsGridProp
                      </div>
                  </div>
 
-                 {/* UPDATED: Changed from font-serif to font-sans and text-gray-900 for readability */}
                  <div className="p-6 md:p-12 max-w-4xl mx-auto">
                     {loading ? (
                         <div className="animate-pulse space-y-6 max-w-2xl mx-auto">

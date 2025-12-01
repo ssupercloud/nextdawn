@@ -1,24 +1,26 @@
-import { getBreakingEvents } from '@/lib/market-service';
+import { getViralEvents } from '@/lib/market-service';
 import Header from '@/components/Header';
 import NewsGrid from '@/components/NewsGrid';
 
 export const revalidate = 60;
 
-export default async function Home() {
-  const breakingEvents = await getBreakingEvents();
+export default async function BreakingNewsPage() {
+  // Fetch "Viral" (Liquidity/Active) events filtered for relevance
+  const viralEvents = await getViralEvents();
 
   return (
+    // FIXED: Changed bg-[#F4F1EA] to bg-background (Pure White)
     <main className="min-h-screen bg-background text-foreground font-sans selection:bg-[#CC0000] selection:text-white pb-20">
       <Header />
       
-      {breakingEvents.length > 0 ? (
+      {viralEvents.length > 0 ? (
         <NewsGrid 
-            events={breakingEvents} 
-            category="Trending" 
+            events={viralEvents} 
+            category="Breaking" 
         />
       ) : (
         <div className="text-center py-20 text-gray-500 font-mono">
-            // SIGNAL LOST: RECONNECTING TO POLYMARKET FEED...
+            // SIGNAL LOST: RECONNECTING TO WIRE...
         </div>
       )}
 

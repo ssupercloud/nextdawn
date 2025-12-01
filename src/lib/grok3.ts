@@ -49,7 +49,7 @@ export async function generateNewsArticle(
     - If odds are high (e.g., >75%), describe it as a "Strong Consensus" or "Clear Favorite".
     
     REQUIRED STRUCTURE (Seamless Flow):
-    1. **The Lead**: Define exactly what this event is and the current state of the market (Who is leading? By how much?).
+    1. **The Lead**: Define exactly what this event is and the current state of the market (Who is leading? By how much? How is it trending in rencent days).
     2. **The Field**: Breakdown the main options/competitors shown in the market data. Who are the key players?
     3. **The Stakes**: Why is this relevant? Why does the market care? (Geopolitics, Economics, Cultural Impact).
     4. **The Context**: Provide real-world background or recent developments that might be driving these specific odds.

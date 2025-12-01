@@ -37,6 +37,13 @@ const CATEGORY_MAP: Record<string, string> = {
     'politics': 'politics'
 };
 
+// HELPER: Get ISO date string for X days ago
+const getRecentDateISO = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return date.toISOString();
+};
+
 export async function getCategoryEvents(category: string): Promise<MarketEvent[]> {
     if (!category) return getBreakingEvents();
 
@@ -49,7 +56,7 @@ export async function getCategoryEvents(category: string): Promise<MarketEvent[]
     try {
         const response = await axios.get(GAMMA_API, {
             params: {
-                limit: 20, // INCREASED: Fetch enough for 17 stories + buffer
+                limit: 65,
                 active: true,
                 closed: false,
                 tag_slug: apiTag.toLowerCase(),
@@ -67,11 +74,12 @@ export async function getCategoryEvents(category: string): Promise<MarketEvent[]
     }
 }
 
+// FRONT PAGE (TRENDING): All-time high volume
 export async function getBreakingEvents(): Promise<MarketEvent[]> {
     try {
         const response = await axios.get(GAMMA_API, {
             params: {
-                limit: 12, // Keep Front Page lighter
+                limit: 20, 
                 active: true,
                 closed: false,
                 volume_min: 50000, 
@@ -81,9 +89,51 @@ export async function getBreakingEvents(): Promise<MarketEvent[]> {
         });
 
         if (!response.data || !Array.isArray(response.data)) return [];
-        return mapResponse(response.data, "Breaking");
+        return mapResponse(response.data, "Trending");
     } catch (error) {
-        console.error("Error fetching breaking events:", error);
+        console.error("Error fetching trending events:", error);
+        return [];
+    }
+}
+
+// BREAKING NEWS PAGE: Filtered for Tech, Economy, Politics (No Sports)
+export async function getViralEvents(): Promise<MarketEvent[]> {
+    try {
+        const response = await axios.get(GAMMA_API, {
+            params: {
+                limit: 100, // Fetch large pool to allow for filtering
+                active: true,
+                closed: false,
+                volume_min: 1000, 
+                start_date_min: getRecentDateISO(7), 
+                order: 'volume', 
+                ascending: false
+            }
+        });
+
+        if (!response.data || !Array.isArray(response.data)) return [];
+
+        // STRICT FILTERING LOGIC
+        const allowedTags = ['politics', 'business', 'economy', 'science', 'technology', 'crypto', 'tech', 'finance'];
+        const bannedTags = ['sports', 'football', 'soccer', 'baseball', 'basketball', 'nfl', 'nba'];
+
+        const filteredData = response.data.filter((event: any) => {
+            // Polymarket events usually have a 'tags' array
+            const tags = event.tags || [];
+            
+            // 1. Check if it contains any BANNED tags (Sports)
+            const isSports = tags.some((t: any) => bannedTags.includes(t.slug?.toLowerCase()));
+            if (isSports) return false;
+
+            // 2. Check if it contains any ALLOWED tags (Politics, Econ, Tech)
+            const isRelevant = tags.some((t: any) => allowedTags.includes(t.slug?.toLowerCase()));
+            return isRelevant;
+        });
+
+        // Return top 17 (2 Hero + 15 Wire)
+        return mapResponse(filteredData.slice(0, 17), "Breaking");
+    } catch (error) {
+        console.error("Error fetching viral events:", error);
         return [];
     }
 }

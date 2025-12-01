@@ -1,26 +1,24 @@
 import type { Config } from "tailwindcss";
 
-const config = {
+const config: Config = {
   content: [
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       fontFamily: {
-        headline: ["'Playfair Display'", "serif"],
-        body: ["Inter", "sans-serif"],
+        sans: ['var(--font-inter)', 'sans-serif'],
+        serif: ['var(--font-playfair)', 'serif'],
       },
       colors: {
-        "news-black": "#0a0a0a",
-        "news-gray": "#505050",
-        "paper-beige": "#f4ebdd",
+        background: "rgb(var(--background))",
+        foreground: "rgb(var(--foreground))",
       },
     },
   },
   plugins: [],
-} satisfies Config;
-
+};
 export default config;
-
